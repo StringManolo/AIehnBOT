@@ -1140,7 +1140,7 @@ ${RUN_FROM_GREASYMONKEY ? `<button onclick="(function() {
   });
 
   // Do not run bot if not enabled
-  if (localStorage.getItem("llmBotEnabled") === "false") {
+  if (localStorage.getItem("llmBotEnabled") === "false" || localStorage.getItem("llmBotEnabled") == null) {
     return;
   }
 
