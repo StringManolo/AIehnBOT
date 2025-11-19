@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AIehnBOT
 // @namespace    https://github.com/StringManolo/AIehnBOT
-// @version      2.0
+// @version      2.0.1
 // @description  Run ollama LLM consumer at foro.elhacker.net
 // @author       StringManolo - https://github.com/StringManolo
 // @match        https://foro.elhacker.net/*
@@ -83,6 +83,7 @@ function runBot() {
   const RUN_ONLY_ON_LOGGED_IN_USERS = true;
   const RUN_ONLY_AT_TEST_SUBFORUM = false; // for debug of markdown and xss
   const RUN_AT_POST_FORUM = false; // post.html is the responses edition to topics
+  const RUN_AT_PROFILES_PAGES = false; // Avoid answers at /profiles/
   const BOT_NAME = "AIehnBOT";
   const BOT_FORUM_MESSAGES_TO_DISPLAY = 1;
   let SCROLL_TO_BOT_MESSAGE = false;
@@ -393,6 +394,14 @@ function runBot() {
     if (/^https:\/\/foro\.elhacker\.net\/profile\.html$/.test(window.location.href)) {
       return true;
     }
+
+    return false;
+  }
+
+  const isProfilesPage = () => {
+    if (/^https:\/\/foro\.elhacker\.net\/profiles(\/.*)?$/.test(window.location.href)) {
+     return true;
+   }
 
     return false;
   }
@@ -1117,6 +1126,10 @@ ${RUN_FROM_GREASYMONKEY ? `<button onclick="(function() {
       localStorage.setItem('llmBotEnabled', true);
     }
     return "Script only running at /test/";
+  }
+
+  if (RUN_AT_PROFILES_PAGES == false && isProfilesPage()) {
+    return "Script not running at /profiles/* pages";
   }
 
   if (isUserAtProfilePage() || RUNNING_FORUM_IN_LOCAL_SERVER ) {
