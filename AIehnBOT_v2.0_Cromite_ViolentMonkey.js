@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AIehnBOT
 // @namespace    https://github.com/StringManolo/AIehnBOT
-// @version      2.0
+// @version      2.2
 // @description  Run ollama LLM consumer at foro.elhacker.net
 // @author       StringManolo - https://github.com/StringManolo
 // @match        https://foro.elhacker.net/*
@@ -83,7 +83,8 @@ function runBot() {
   const RUN_ONLY_ON_LOGGED_IN_USERS = false;
   const RUN_ONLY_AT_TEST_SUBFORUM = false; // for debug of markdown and xss
   const RUN_AT_POST_FORUM = false; // post.html is the responses edition to topics
-  const BOT_NAME = "AIehnBOT";
+  const RUN_AT_PROFILES_PAGES = false; // Avoid answers at /profiles/
+  const BOT_NAME = RUN_FROM_GREASYMONKEY ? "AIehnBOT (Extension)" : "AIehnBOT";
   const BOT_FORUM_MESSAGES_TO_DISPLAY = 1;
   let SCROLL_TO_BOT_MESSAGE = false;
   let BOT_FORUM_IMAGE_URL = "https://foro.elhacker.net/Themes/converted/selogo.jpg"
@@ -397,6 +398,14 @@ function runBot() {
     return false;
   }
 
+    const isProfilesPage = () => {
+      if (/^https:\/\/foro\.elhacker\.net\/profiles(\/.*)?$/.test(window.location.href))  {
+        return true;
+      }
+
+      return false;
+    }
+
   const isUserAtResponsePage = () => {
     if (/^https:\/\/foro\.elhacker\.net\/post\.html$/.test(window.location.href)) {
       return true;
@@ -407,6 +416,13 @@ function runBot() {
 
   const isUserAtConfigLLMPage = () => {
     if (/^https:\/\/foro\.elhacker\.net\/profile\.html\#llmBotConfig$/.test(window.location.href)) {
+      return true;
+    }
+    return false;
+  }
+
+  const isUserAtConfigLLMPageFromExtension = () => {
+    if (/^https:\/\/foro\.elhacker\.net\/profile\.html\#llmBotConfigExtension$/.test(window.location.href)) {
       return true;
     }
     return false;
@@ -727,6 +743,10 @@ Línea: ${line}i`
       const newOption = document.createElement('a');
       newOption.href = RUNNING_FORUM_IN_LOCAL_SERVER ? "http://localhost:8000/index.html#llmBotConfig" : 'https://foro.elhacker.net/profile.html#llmBotConfig';
       newOption.textContent = 'Configurar LLM';
+      if (RUN_FROM_GREASYMONKEY) {
+        newOption.href += "Extension";
+        newOption.innerHTML = "<br>" + newOption.innerHTML + " (Extension)<br>"
+      }
       newOption.className = 'smalltext';
 
       listItem.appendChild(newOption);
@@ -771,9 +791,17 @@ const inyectLLMOptionsPage = () => {
   };
 
 
-    const botPromptPlaceholder = escapeText(localStorage.getItem('llmBotPrompt') || BOT_CONTEXT);
-    const botImageURL = escapeText(localStorage.getItem("llmBotImage") || BOT_FORUM_IMAGE_URL);
-    const botSignature = escapeText(localStorage.getItem("llmBotSignature") || BOT_FORUM_SIGNATURE);
+    const botPromptPlaceholder = RUN_FROM_GREASYMONKEY ? 
+      (escapeText(localStorage.getItem('llmBotPromptExtension') || BOT_CONTEXT)) : 
+      escapeText(localStorage.getItem('llmBotPrompt') || BOT_CONTEXT);
+
+    const botImageURL = RUN_FROM_GREASYMONKEY ? 
+      (escapeText(localStorage.getItem("llmBotImageExtension") || BOT_FORUM_IMAGE_URL)) : 
+      escapeText(localStorage.getItem("llmBotImage") || BOT_FORUM_IMAGE_URL);
+
+    const botSignature = RUN_FROM_GREASYMONKEY ? 
+      (escapeText(localStorage.getItem("llmBotSignatureExtension") || BOT_FORUM_SIGNATURE)) :
+      escapeText(localStorage.getItem("llmBotSignature") || BOT_FORUM_SIGNATURE);
 
     document.open();
     document.write(`
@@ -1002,31 +1030,31 @@ const inyectLLMOptionsPage = () => {
             
             // Cargar configuración existente al iniciar
             function loadConfig() {
-                document.getElementById('enableBot').checked = localStorage.getItem('llmBotEnabled') === 'true';
-                document.getElementById('autoScroll').checked = localStorage.getItem('llmBotAutoScroll') === 'true';
-                document.getElementById('prompt').value = localStorage.getItem('llmBotPrompt') || defaultPrompt;
-                document.getElementById('botImage').value = localStorage.getItem('llmBotImage') || defaultImage;
-                document.getElementById('signature').value = localStorage.getItem('llmBotSignature') || defaultSignature;
+                document.getElementById('enableBot').checked = localStorage.getItem('llmBotEnabled${RUN_FROM_GREASYMONKEY ? "Extension" : ""}') === 'true';
+                document.getElementById('autoScroll').checked = localStorage.getItem('llmBotAutoScroll${RUN_FROM_GREASYMONKEY ? "Extension" : ""}') === 'true';
+                document.getElementById('prompt').value = localStorage.getItem('llmBotPrompt${RUN_FROM_GREASYMONKEY ? "Extension" : ""}') || defaultPrompt;
+                document.getElementById('botImage').value = localStorage.getItem('llmBotImage${RUN_FROM_GREASYMONKEY ? "Extension" : ""}') || defaultImage;
+                document.getElementById('signature').value = localStorage.getItem('llmBotSignature${RUN_FROM_GREASYMONKEY ? "Extension" : ""}') || defaultSignature;
             }
             
             // Guardar configuración
             document.getElementById('saveBtn').addEventListener('click', function() {
-                localStorage.setItem('llmBotEnabled', document.getElementById('enableBot').checked);
-                localStorage.setItem('llmBotAutoScroll', document.getElementById('autoScroll').checked);
-                localStorage.setItem('llmBotPrompt', document.getElementById('prompt').value);
-                localStorage.setItem('llmBotImage', document.getElementById('botImage').value);
-                localStorage.setItem('llmBotSignature', document.getElementById('signature').value);
+                localStorage.setItem('llmBotEnabled${RUN_FROM_GREASYMONKEY ? "Extension" : ""}', document.getElementById('enableBot').checked);
+                localStorage.setItem('llmBotAutoScroll${RUN_FROM_GREASYMONKEY ? "Extension" : ""}', document.getElementById('autoScroll').checked);
+                localStorage.setItem('llmBotPrompt${RUN_FROM_GREASYMONKEY ? "Extension" : ""}', document.getElementById('prompt').value);
+                localStorage.setItem('llmBotImage${RUN_FROM_GREASYMONKEY ? "Extension" : ""}', document.getElementById('botImage').value);
+                localStorage.setItem('llmBotSignature${RUN_FROM_GREASYMONKEY ? "Extension" : ""}', document.getElementById('signature').value);
                 
                 window.location = window.location.href.split("#")[0];
             });
 
             // Reset config
             document.getElementById('resetBtn').addEventListener('click', function() {
-                localStorage.removeItem('llmBotEnabled');
-                localStorage.removeItem('llmBotAutoScroll');
-                localStorage.removeItem('llmBotPrompt');
-                localStorage.removeItem('llmBotImage');
-                localStorage.removeItem('llmBotSignature');
+                localStorage.removeItem('llmBotEnabled${RUN_FROM_GREASYMONKEY ? "Extension" : ""}');
+                localStorage.removeItem('llmBotAutoScroll${RUN_FROM_GREASYMONKEY ? "Extension" : ""}');
+                localStorage.removeItem('llmBotPrompt${RUN_FROM_GREASYMONKEY ? "Extension" : ""}');
+                localStorage.removeItem('llmBotImage${RUN_FROM_GREASYMONKEY ? "Extension" : ""}');
+                localStorage.removeItem('llmBotSignature${RUN_FROM_GREASYMONKEY ? "Extension" : ""}');
 
                 loadConfig(); // Recargar valores por defecto
                 window.location = window.location.href.split("#")[0];
@@ -1047,19 +1075,19 @@ ${RUN_FROM_GREASYMONKEY ? `<button onclick="(function() {
         // Cargar configuración existente al iniciar
         function loadConfig() {
             if (document.getElementById('enableBot')) {
-                document.getElementById('enableBot').checked = localStorage.getItem('llmBotEnabled') === 'true';
+                document.getElementById('enableBot').checked = localStorage.getItem('llmBotEnabled${RUN_FROM_GREASYMONKEY ? "Extension" : ""}') === 'true';
             }
             if (document.getElementById('autoScroll')) {
-                document.getElementById('autoScroll').checked = localStorage.getItem('llmBotAutoScroll') === 'true';
+                document.getElementById('autoScroll').checked = localStorage.getItem('llmBotAutoScroll${RUN_FROM_GREASYMONKEY ? "Extension" : ""}') === 'true';
             }
             if (document.getElementById('prompt')) {
-                document.getElementById('prompt').value = localStorage.getItem('llmBotPrompt') || defaultPrompt;
+                document.getElementById('prompt').value = localStorage.getItem('llmBotPrompt${RUN_FROM_GREASYMONKEY ? "Extension" : ""}') || defaultPrompt;
             }
             if (document.getElementById('botImage')) {
-                document.getElementById('botImage').value = localStorage.getItem('llmBotImage') || defaultImage;
+                document.getElementById('botImage').value = localStorage.getItem('llmBotImage${RUN_FROM_GREASYMONKEY ? "Extension" : ""}') || defaultImage;
             }
             if (document.getElementById('signature')) {
-                document.getElementById('signature').value = localStorage.getItem('llmBotSignature') || defaultSignature;
+                document.getElementById('signature').value = localStorage.getItem('llmBotSignature${RUN_FROM_GREASYMONKEY ? "Extension" : ""}') || defaultSignature;
             }
         }
 
@@ -1067,11 +1095,11 @@ ${RUN_FROM_GREASYMONKEY ? `<button onclick="(function() {
         const saveBtn = document.getElementById('saveBtn');
         if (saveBtn) {
             saveBtn.addEventListener('click', function() {
-                localStorage.setItem('llmBotEnabled', document.getElementById('enableBot').checked);
-                localStorage.setItem('llmBotAutoScroll', document.getElementById('autoScroll').checked);
-                localStorage.setItem('llmBotPrompt', document.getElementById('prompt').value);
-                localStorage.setItem('llmBotImage', document.getElementById('botImage').value);
-                localStorage.setItem('llmBotSignature', document.getElementById('signature').value);
+                localStorage.setItem('llmBotEnabled${RUN_FROM_GREASYMONKEY ? "Extension" : ""}', document.getElementById('enableBot').checked);
+                localStorage.setItem('llmBotAutoScroll${RUN_FROM_GREASYMONKEY ? "Extension" : ""}', document.getElementById('autoScroll').checked);
+                localStorage.setItem('llmBotPrompt${RUN_FROM_GREASYMONKEY ? "Extension" : ""}', document.getElementById('prompt').value);
+                localStorage.setItem('llmBotImage${RUN_FROM_GREASYMONKEY ? "Extension" : ""}', document.getElementById('botImage').value);
+                localStorage.setItem('llmBotSignature${RUN_FROM_GREASYMONKEY ? "Extension" : ""}', document.getElementById('signature').value);
                 window.location = window.location.href.split('#')[0];
             });
         }
@@ -1080,11 +1108,11 @@ ${RUN_FROM_GREASYMONKEY ? `<button onclick="(function() {
         const resetBtn = document.getElementById('resetBtn');
         if (resetBtn) {
             resetBtn.addEventListener('click', function() {
-                localStorage.removeItem('llmBotEnabled');
-                localStorage.removeItem('llmBotAutoScroll');
-                localStorage.removeItem('llmBotPrompt');
-                localStorage.removeItem('llmBotImage');
-                localStorage.removeItem('llmBotSignature');
+                localStorage.removeItem('llmBotEnabled${RUN_FROM_GREASYMONKEY ? "Extension" : ""}');
+                localStorage.removeItem('llmBotAutoScroll${RUN_FROM_GREASYMONKEY ? "Extension" : ""}');
+                localStorage.removeItem('llmBotPrompt${RUN_FROM_GREASYMONKEY ? "Extension" : ""}');
+                localStorage.removeItem('llmBotImage${RUN_FROM_GREASYMONKEY ? "Extension" : ""}');
+                localStorage.removeItem('llmBotSignature${RUN_FROM_GREASYMONKEY ? "Extension" : ""}');
                 loadConfig(); // Recargar valores por defecto
                 window.location = window.location.href.split('#')[0];
             });
@@ -1103,15 +1131,16 @@ ${RUN_FROM_GREASYMONKEY ? `<button onclick="(function() {
 };
 
 
-
-
-
   /* MAIN */
   if (RUN_ONLY_ON_LOGGED_IN_USERS && isUserLoggedOut()) {
     return `${BOT_NAME} not running for not logged in users`;
   }
   
-  
+  if (RUN_AT_PROFILES_PAGES == false && isProfilesPage()) {
+    return "Script not running at /profiles/* pages";
+  }
+
+
   if (RUN_ONLY_AT_TEST_SUBFORUM && (!isTestSubforum())) {
     if (RUN_FROM_GREASYMONKEY) {
       localStorage.setItem('llmBotEnabled', true);
@@ -1132,32 +1161,43 @@ ${RUN_FROM_GREASYMONKEY ? `<button onclick="(function() {
     inyectLLMOptionsPage();
   }
 
+  if (isUserAtConfigLLMPage() || (RUNNING_FORUM_IN_LOCAL_SERVER && window.location.href == "http://localhost:8000/index.html#llmBotConfigExtension")) {
+    inyectLLMOptionsPage();
+  }
+
   // detect when navigating to url from profile.html using the link
   window.addEventListener("hashchange", () => {
-    if (isUserAtConfigLLMPage() || (RUNNING_FORUM_IN_LOCAL_SERVER && window.location.href == "http://localhost:8000/index.html#llmBotConfig")) {
+    if (RUN_FROM_GREASYMONKEY === true) {
+      if (isUserAtConfigLLMPageFromExtension() || (RUNNING_FORUM_IN_LOCAL_SERVER && window.location.href == "http://localhost:8000/index.html#llmBotConfigExtension")) {
       inyectLLMOptionsPage();
+      }
+    } else {
+      if (isUserAtConfigLLMPage() || (RUNNING_FORUM_IN_LOCAL_SERVER && window.location.href == "http://localhost:8000/index.html#llmBotConfig")) {
+        inyectLLMOptionsPage();
+      }
     }
   });
 
   // Do not run bot if not enabled
-  if (localStorage.getItem("llmBotEnabled") === "false") {
+  if (localStorage.getItem(RUN_FROM_GREASYMONKEY ? "llmBotEnabledExtension" : "llmBotEnabled") === "false") {
     return;
   }
 
+
   // Config bot with user preferences before run
-  if (localStorage.getItem("llmBotAutoScroll") === "true") {
+  if (localStorage.getItem(RUN_FROM_GREASYMONKEY ? "llmBotAutoScrollExtension" : "llmBotAutoScroll") === "true") {
     SCROLL_TO_BOT_MESSAGE = true; 
   } else {
     SCROLL_TO_BOT_MESSAGE = false;
   }
 
-  if (localStorage.getItem("llmBotPrompt")) {
-    BOT_CONTEXT = localStorage.getItem("llmBotPrompt") 
+  if (localStorage.getItem(RUN_FROM_GREASYMONKEY ? "llmBotPromptExtension" : "llmBotPrompt")) {
+    BOT_CONTEXT = localStorage.getItem(RUN_FROM_GREASYMONKEY ? "llmBotPromptExtension" : "llmBotPrompt") 
     BOT_RULES = "";
   }
 
-  BOT_FORUM_IMAGE_URL = localStorage.getItem("llmBotImage") || BOT_FORUM_IMAGE_URL;
-  BOT_FORUM_SIGNATURE = localStorage.getItem("llmBotSignature") || BOT_FORUM_SIGNATURE;
+  BOT_FORUM_IMAGE_URL = localStorage.getItem(RUN_FROM_GREASYMONKEY ? "llmBotImage" : "llmBotImage") || BOT_FORUM_IMAGE_URL;
+  BOT_FORUM_SIGNATURE = localStorage.getItem(RUN_FROM_GREASYMONKEY ? "llmBotSignatureExtension" : "llmBotSignature") || BOT_FORUM_SIGNATURE;
 
   // Run bot
   const forumData = extractForumData();
