@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AIehnBOT
 // @namespace    https://github.com/StringManolo/AIehnBOT
-// @version      2.0.1
+// @version      2.0.2
 // @description  Run ollama LLM consumer at foro.elhacker.net
 // @author       StringManolo - https://github.com/StringManolo
 // @match        https://foro.elhacker.net/*
