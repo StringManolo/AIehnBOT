@@ -2,6 +2,9 @@
 
 Userscript para ejecutar un consumidor de LLM (Ollama) directamente en la interfaz de foro.elhacker.net. El script genera respuestas automáticas basadas en el contexto del hilo utilizando la API de chat del foro.
 
+![aiehnbot_screenshot](https://github.com/user-attachments/assets/15a7989e-3333-41c1-b055-2dce16584de8)
+
+
 ## Características
 
 * Integración de respuestas generadas por IA (modelo Gemma 3) en los hilos del foro.
