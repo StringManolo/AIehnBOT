@@ -407,8 +407,8 @@ function runBot() {
     }
 
   const isUserAtResponsePage = () => {
-    if (/^https:\/\/foro\.elhacker\.net\/post\.html$/.test(window.location.href)) {
-      return true;
+    if (/^https:\/\/foro\.elhacker\.net\/post\.html/.test(window.location.href)) {
+    return true;
     }
 
     return false;

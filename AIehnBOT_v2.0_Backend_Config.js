@@ -99,7 +99,7 @@ function runBot() {
   - Sé conciso pero informativo
   - No menciones que eres una IA`
   const API_ENDPOINT = "https://api.elhacker.net/api/chat";
-  const API_MODEL = "gemma3:27b-it-fp16";
+  const API_MODEL = "mistral-large-3:675b-cloud";
   const API_ROL = "user";
   const BLOCKED_URL = 'about:blank#blocked'; 
   const RUNNING_FORUM_IN_LOCAL_SERVER = false; // swap urls from https://foro.elhacker.net to http://localhost:8000 for development
@@ -407,7 +407,7 @@ function runBot() {
   }
 
   const isUserAtResponsePage = () => {
-    if (/^https:\/\/foro\.elhacker\.net\/post\.html$/.test(window.location.href)) {
+    if (/^https:\/\/foro\.elhacker\.net\/post\.html/.test(window.location.href)) {
       return true;
     }
 
