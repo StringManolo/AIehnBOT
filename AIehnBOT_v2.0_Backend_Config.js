@@ -10,100 +10,44 @@
 
 /* Previous commentary is to use this script as a browser extension do not touch */
 
-
-
-
-/* EXPLICACION DE COMO USAR EL SCRIPT Y LAS OPCIONES DISPONIBLES para AIehnBOT.js 2.0: 
- 
-
- 
-  1. DIRECTAMENTE SOBRE foro.elhacker.net metiendo el <script src="./bot.js"></script> en el código
-    * Esto solo lo puede hacer el admin del elhacker.net
-    Configuración de variables necesaria:
-      RUN_FROM_GREASYMONKEY = false; 
-      RUN_ONLY_AT_TEST_SUBFORUM = false;  // true para debug de seguridad
-      RUN_ONLY_ON_LOGGED_IN_USERS = true;
-      RUN_AT_POST_FORUM = false;
-      SCROLL_TO_BOT_MESSAGE = false;
-      RUNNING_FORUM_IN_LOCAL_SERVER = false;
-      * Si alguna de estas opciones no está así, puede afectar negativamente al foro.
-
-
-  2. USANDO UNA EXTENSIÓN DE NAVEGADOR.
-    * Puedes usar el navegador Cromite - https://github.com/uazo/cromite/ (disponible en Android)
-    * Puedes usar la extensión para tu navegador Violentmonkey - https://github.com/Violentmonkey/Violentmonkey 
-     Configuración de variables necesaria:
-       RUN_FROM_GREASYMONKEY = true;
-       RUN_ONLY_AT_TEST_SUBFORUM = false;
-       RUN_ONLY_ON_LOGGED_IN_USERS = false;
-       RUNNING_FORUM_IN_LOCAL_SERVER = false;
-       * La pagina de configuración se tiene que activar con un botón antes de usarla
-       * Esto es debido a limites de las extensiones
-       * Si quieres correr el bot sin cuenta de foro.elhacker.net, comenta o borra el siguiente código de este archivo (esta abjo de todo):
-         if (!localStorage.getItem("llmBotEnabled")) {
-           return;
-         }
- 
-
-
-  3. EN UN SERVIDOR LOCAL
-    * Si tienes acceso a un servidor local que sirva la web de foro.elhacker.net
-    * Correlo en el puerto 8000
-    * Yo por ejemplo sirvo páginas státicas editadas para debug en local de este script
-    Configuración de variables necesaria:
-      RUN_FROM_GREASYMONKEY = false;
-      RUN_ONLY_AT_TEST_SUBFORUM = false;
-      RUNNING_FORUM_IN_LOCAL_SERVER = true;
-      RUN_ONLY_ON_LOGGED_IN_USERS = false;
-
-
-  TODOS.
-   * UNA VEZ CONFIGURADO EL SCRIPT, VE A https://foro.elhacker.net/profile.html
-   * Pincha la opción de la izquierda Configurar LLM
-   * Marca la casilla de Habilitar Bot y dale al botón de guardar
-   * Listo, ve a cualquier tema y el bot respondera
-
-*/
-
-
-
 const RUN_FROM_GREASYMONKEY = false;
 
-// Avoid running the bot 2 times under GreaseMonkey
+// Disparo seguro: si el DOM ya cargó, ejecuta inmediatamente
 if (RUN_FROM_GREASYMONKEY) {
   runBot();
 } else {
-  window.addEventListener("load", () => {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", runBot);
+  } else {
     runBot();
-  });
+  }
 }
 
 function runBot() { 
   /* Config Vars */
   const RUN_ONLY_ON_LOGGED_IN_USERS = true;
-  const RUN_ONLY_AT_TEST_SUBFORUM = false; // for debug of markdown and xss
-  const RUN_AT_POST_FORUM = false; // post.html is the responses edition to topics
-  const RUN_AT_PROFILES_PAGES = false; // Avoid answers at /profiles/
+  const RUN_ONLY_AT_TEST_SUBFORUM = false;
+  const RUN_AT_POST_FORUM = false;
+  const RUN_AT_PROFILES_PAGES = false;
   const BOT_NAME = "AIehnBOT";
   const BOT_FORUM_MESSAGES_TO_DISPLAY = 1;
   let SCROLL_TO_BOT_MESSAGE = false;
-  let BOT_FORUM_IMAGE_URL = "https://foro.elhacker.net/Themes/converted/selogo.jpg"
-  const SHOW_GENERANDO_RESPUESTA_STRING = false; // Not working ???
-  let BOT_FORUM_SIGNATURE = "Esta respuesta se ha generado por inteligencia artificial"
-  let BOT_CONTEXT =`Eres ${BOT_NAME}, un experto en ciberseguridad, hacking y tecnología con amplios conocimientos técnicos. Eres miembro activo del foro elhacker.net`;
+  let BOT_FORUM_IMAGE_URL = "https://foro.elhacker.net/Themes/converted/selogo.jpg";
+  const SHOW_GENERANDO_RESPUESTA_STRING = false;
+  let BOT_FORUM_SIGNATURE = "Esta respuesta se ha generado por inteligencia artificial";
+  let BOT_CONTEXT = `Eres ${BOT_NAME}, un experto en ciberseguridad, hacking y tecnología con amplios conocimientos técnicos. Eres miembro activo del foro elhacker.net`;
   let BOT_RULES = `Responde como un experto en informática y hacking:
   - Proporciona información técnica precisa y útil
   - Si es relevante, aporta perspectiva de seguridad informática
   - Mantén un tono de compañero del foro, natural y accesible
   - Responde en español
   - Sé conciso pero informativo
-  - No menciones que eres una IA`
+  - No menciones que eres una IA`;
   const API_ENDPOINT = "https://api.elhacker.net/api/chat";
-  const API_MODEL = "mistral-large-3:675b-cloud";
+  const API_MODEL = "gpt-oss:20b-cloud";
   const API_ROL = "user";
   const BLOCKED_URL = 'about:blank#blocked'; 
-  const RUNNING_FORUM_IN_LOCAL_SERVER = false; // swap urls from https://foro.elhacker.net to http://localhost:8000 for development
-
+  const RUNNING_FORUM_IN_LOCAL_SERVER = false;
 
 /* functions */
   const detectTextPlusMarkdownCode = (text) => {
@@ -268,19 +212,14 @@ function runBot() {
     const escapedContent = escapeHtml(content);
     const escapedLanguage = escapeHtml(language);
     
-    // Para mantener compatibilidad con GeSHi, usamos un único li como hace SMF
-    // pero preservamos la numeración de líneas dividiendo el contenido
     const lines = escapedContent.split('\n');
     
-    // Eliminar líneas vacías al final
     while (lines.length > 0 && lines[lines.length - 1].trim() === '') {
       lines.pop();
     }
     
-    // Construir el contenido con saltos de línea preservados
     const formattedContent = lines.map(line => line === '' ? ' ' : line).join('\n');
     
-    // Determinar la clase correcta para GeSHi
     let geshiClass = language;
     if (language === 'js') geshiClass = 'javascript';
     if (language === 'py') geshiClass = 'python';
@@ -292,7 +231,6 @@ function runBot() {
   };
 
   const replaceMarkdownByHTML = (markdown) => {
-    // Si es un bloque de código completo, procesarlo de manera especial
     const codeBlockRegex = /^```([a-zA-Z0-9\+]*)\n?([\s\S]*?)```$/;
     const codeMatch = markdown.match(codeBlockRegex);
 
@@ -304,7 +242,6 @@ function runBot() {
 
     let safeText = escapeHtml(markdown);
 
-    // Procesar código inline
     safeText = safeText.replace(/`([^`]+)`/g, '<code>$1</code>');
 
     let processed = safeText
@@ -359,68 +296,50 @@ function runBot() {
   const LLMParserStream = (untrustedText, isFinalChunk = false) => {
     let processedText = escapeHtml(untrustedText);
     
-    // Solo procesar código inline básico durante el streaming
     processedText = processedText.replace(/`([^`]+)`/g, '<code>$1</code>');
     processedText = processedText.replace(/\n/g, '<br>');
 
     if (isFinalChunk) {
-      // Al final, aplicar el procesamiento completo de markdown
       processedText = replaceMarkdownByHTML(untrustedText);
     }
 
     return processedText;
   };
 
-  /* SCRIPT FUNCTIONS */
   const isUserLoggedOut = () => {
     const html = document.documentElement.outerHTML;
-    const regex = /<a href="https:\/\/foro\.elhacker\.net\/logout\.html;sesc=([a-z0-9]{32})/;
-    if (html.match(regex)) {
-      return false;
-    }
-    
-    return true;
-  }
+    const regex = /(?:logout\.html|action=logout)/i;
+    return !regex.test(html);
+  };
 
   const isTestSubforum = () => {
     if (/^https:\/\/foro\.elhacker\.net\/test(\/.*)?$/.test(window.location.href)) {
       return true;
     } 
-    
     return false;
-  }
+  };
 
   const isUserAtProfilePage = () => {
-    if (/^https:\/\/foro\.elhacker\.net\/profile\.html$/.test(window.location.href)) {
-      return true;
-    }
-
-    return false;
-  }
+    return /[\/\.]profile\.html($|[\?;#])/i.test(window.location.href);
+  };
 
   const isProfilesPage = () => {
     if (/^https:\/\/foro\.elhacker\.net\/profiles(\/.*)?$/.test(window.location.href)) {
-     return true;
-   }
-
+      return true;
+    }
     return false;
-  }
+  };
 
   const isUserAtResponsePage = () => {
     if (/^https:\/\/foro\.elhacker\.net\/post\.html/.test(window.location.href)) {
       return true;
     }
-
     return false;
-  }
+  };
 
   const isUserAtConfigLLMPage = () => {
-    if (/^https:\/\/foro\.elhacker\.net\/profile\.html\#llmBotConfig$/.test(window.location.href)) {
-      return true;
-    }
-    return false;
-  }
-
+    return isUserAtProfilePage() && window.location.hash.includes('llmBotConfig');
+  };
 
   const Parser = {};
   Parser.sanitizeURL = replaceDangerousURLByHttpsEncoded;
@@ -514,20 +433,15 @@ function runBot() {
               onChunk(chunk);
             }
           } catch (err) {
-            console.warn(`[${BOT_NAME}-debug]Error parseando chunk JSON:
-${err}
-Línea: ${line}i`
-            )
+            console.warn(`[${BOT_NAME}-debug]Error parseando chunk JSON:\n${err}\nLínea: ${line}`);
           }
         }
       }
     } catch (err) {
-      console.error(`[${BOT_NAME}-debug]Error al consultar la API en modo stream:
-      ${err}
-      `);
+      console.error(`[${BOT_NAME}-debug]Error al consultar la API en modo stream:\n${err}`);
       throw err;
     }
-  }
+  };
 
   const createPlaceholderElement = () => {
     const now = new Date();
@@ -549,20 +463,20 @@ Línea: ${line}i`
                       <td valign="top" width="16%" rowspan="2" style="overflow: hidden;">
                         <b><a href="javascript:void(0)" title="Ver perfil de ${BOT_NAME}">${BOT_NAME}</a></b>
                         <div class="smalltext"><br>
-                          <img src="https://foro.elhacker.net/Themes/converted/images/useroff.gif" alt="Desconectado" border="0" align="middle"><span class="smalltext"> Desconectado</span><br><br>
+                          <img src="[https://foro.elhacker.net/Themes/converted/images/useroff.gif](https://foro.elhacker.net/Themes/converted/images/useroff.gif)" alt="Desconectado" border="0" align="middle"><span class="smalltext"> Desconectado</span><br><br>
                           Mensajes: ${BOT_FORUM_MESSAGES_TO_DISPLAY}<br><br>
                           <div style="overflow: auto; width: 100%;">
                             <img src="${BOT_FORUM_IMAGE_URL}" alt="" class="avatar" border="0" style="max-width: 100px;">
                           </div><br>
                           Bot Experto en Seguridad<br><br>
-                          <a href="javascript:void(0)"><img src="https://foro.elhacker.net/Themes/converted/images/icons/profile_sm.gif" alt="Ver Perfil" title="Ver Perfil" border="0"></a>
+                          <a href="javascript:void(0)"><img src="[https://foro.elhacker.net/Themes/converted/images/icons/profile_sm.gif](https://foro.elhacker.net/Themes/converted/images/icons/profile_sm.gif)" alt="Ver Perfil" title="Ver Perfil" border="0"></a>
                         </div>
                       </td>
                       <td valign="top" width="85%" height="100%">
                         <table width="100%" border="0">
                           <tbody>
                             <tr>
-                              <td align="left" valign="middle"><a href="javascript:void(0)"><img src="https://foro.elhacker.net/Themes/converted/images/post/xx.gif" alt="" border="0"></a></td>
+                              <td align="left" valign="middle"><a href="javascript:void(0)"><img src="[https://foro.elhacker.net/Themes/converted/images/post/xx.gif](https://foro.elhacker.net/Themes/converted/images/post/xx.gif)" alt="" border="0"></a></td>
                               <td align="left" valign="middle">
                                 <b><a href="javascript:void(0)">Re: ${Parser.htmlToEntities(topicTitle)}</a></b>
                                 <div class="smalltext">« <b>Respuesta en:</b> ${dateString}, ${timeString} »</div>
@@ -590,7 +504,7 @@ Línea: ${line}i`
                               <td align="left" valign="bottom" class="smalltext">
                               </td>
                               <td align="right" valign="bottom" class="smalltext">
-                                <img src="https://foro.elhacker.net/Themes/converted/images/ip.gif" alt="" border="0">
+                                <img src="[https://foro.elhacker.net/Themes/converted/images/ip.gif](https://foro.elhacker.net/Themes/converted/images/ip.gif)" alt="" border="0">
                               </td>
                             </tr>
                           </tbody>
@@ -610,7 +524,7 @@ Línea: ${line}i`
       </td>
     `;
     return placeholderElement;
-  }
+  };
 
   const insertMessageToForum = (messageElement, numMensajesReales) => {
     let insertionPoint = null;
@@ -659,7 +573,7 @@ Línea: ${line}i`
     }
 
     return true;
-  }
+  };
 
   const appendStreamContent = (contentElement, content) => {
     const streamContainer = contentElement.querySelector('#ai-stream-content');
@@ -676,7 +590,7 @@ Línea: ${line}i`
     streamContainer.scrollTop = streamContainer.scrollHeight;
 
     return streamContainer;
-  }
+  };
 
   const applyFinalMarkdown = (contentElement) => {
     const streamContainer = contentElement.querySelector('#ai-stream-content');
@@ -686,7 +600,7 @@ Línea: ${line}i`
     const finalHTML = Parser.markdownToHTML(markdownText);
 
     streamContainer.innerHTML = finalHTML;
-  }
+  };
 
   const generateResponseStream = async (contextData, placeholderElement) => {
     let streamContainer = null;
@@ -715,70 +629,71 @@ Línea: ${line}i`
       console.error(`[${BOT_NAME}-debug]Detalles del error: ${err.message}`);
       return false;
     }
-  }
+  };
 
-
-  /* Profile.html functions: */
   const inyectNewOptionAtProfilePage = () => {   
-    const menuLinks = document.querySelectorAll('a');
-    let personalMsgLink = null;
-      
-    for (let link of menuLinks) {
-      if (link.textContent.includes("Configuración de Mensajes Personales") || link.textContent.includes("Configuraci&oacute;n de Mensajes Personales")) {
-        personalMsgLink = link;
-        break;
-      }
-    }
-						
+    if (document.querySelector('a[href*="#llmBotConfig"]')) return;
 
-    if (personalMsgLink) {
-      const listItem = personalMsgLink.parentNode;
+    const allLinks = Array.from(document.querySelectorAll('a'));
+    
+    let targetLink = allLinks.find(link => 
+      link.textContent.trim() === 'Configuración de Mensajes Personales' ||
+      (link.href && link.href.includes('sa=pmprefs'))
+    );
+
+    if (!targetLink) {
+      targetLink = allLinks.find(link => 
+        link.textContent.trim() === 'Notificaciones y email' ||
+        link.textContent.trim() === 'Información del Perfil del foro' ||
+        (link.href && (link.href.includes('sa=forumProfile') || link.href.includes('sa=account')))
+      );
+    }
+
+    if (targetLink && targetLink.parentNode) {
+      const br = document.createElement('br');
       const newOption = document.createElement('a');
-      newOption.href = RUNNING_FORUM_IN_LOCAL_SERVER ? "http://localhost:8000/index.html#llmBotConfig" : 'https://foro.elhacker.net/profile.html#llmBotConfig';
+      newOption.href = RUNNING_FORUM_IN_LOCAL_SERVER 
+        ? "http://localhost:8000/index.html#llmBotConfig" 
+        : "profile.html#llmBotConfig";
       newOption.textContent = 'Configurar LLM';
       newOption.className = 'smalltext';
 
-      listItem.appendChild(newOption);
+      targetLink.parentNode.insertBefore(br, targetLink.nextSibling);
+      targetLink.parentNode.insertBefore(newOption, br.nextSibling);
     }
-  }
-
-
-
-
-  const escapeText = (text) => {
-  if (typeof text !== 'string') return text;
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    //.replace(/\//g, '&#x2F;')
-    .replace(/\\/g, '\\\\')
-    .replace(/\n/g, '\\n')
-    .replace(/\r/g, '\\r')
-    .replace(/\t/g, '\\t')
-    .replace(/\f/g, '\\f');
-
-};
-
-const inyectLLMOptionsPage = () => {
-  const formatCurrentDate = () => {
-      const capitalize = (str) => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
-
-    const now = new Date();
-    const dateOptions = { day: 'numeric', month: 'long', year: 'numeric' };
-    let formattedDate = now.toLocaleDateString('es', dateOptions)
-      .replace(" de", "")
-      .replace(" de", "");
-    const month = formattedDate.split(" ")[1];
-    formattedDate = formattedDate.replace(month, capitalize(month));
-    const hours = now.getHours().toString().padStart(2, '0');
-    const minutes = now.getMinutes().toString().padStart(2, '0');
-    const ampm = now.getHours() >= 12 ? 'pm' : 'am';
-    return `${formattedDate}, ${hours}:${minutes} ${ampm}`;
   };
 
+  const escapeText = (text) => {
+    if (typeof text !== 'string') return text;
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#x27;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\\/g, '\\\\')
+      .replace(/\n/g, '\\n')
+      .replace(/\r/g, '\\r')
+      .replace(/\t/g, '\\t')
+      .replace(/\f/g, '\\f');
+  };
+
+ const inyectLLMOptionsPage = () => {
+    const formatCurrentDate = () => {
+      const capitalize = (str) => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+
+      const now = new Date();
+      const dateOptions = { day: 'numeric', month: 'long', year: 'numeric' };
+      let formattedDate = now.toLocaleDateString('es', dateOptions)
+        .replace(" de", "")
+        .replace(" de", "");
+      const month = formattedDate.split(" ")[1];
+      formattedDate = formattedDate.replace(month, capitalize(month));
+      const hours = now.getHours().toString().padStart(2, '0');
+      const minutes = now.getMinutes().toString().padStart(2, '0');
+      const ampm = now.getHours() >= 12 ? 'pm' : 'am';
+      return `${formattedDate}, ${hours}:${minutes} ${ampm}`;
+    };
 
     const botPromptPlaceholder = escapeText(localStorage.getItem('llmBotPrompt') || BOT_CONTEXT);
     const botImageURL = escapeText(localStorage.getItem("llmBotImage") || BOT_FORUM_IMAGE_URL);
@@ -793,130 +708,26 @@ const inyectLLMOptionsPage = () => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Configuración LLM Bot</title>
         <style>
-            html {
-              text-size-adjust: none;
-            }
-            body {
-                font-family: Verdana, Arial, sans-serif;
-                margin: 0;
-                padding: 0;
-                background-color: #f5f5f5;
-                color: #005177;
-            }
-            .bordercolor {
-                border: 1px solid #000000;
-            }
-            .catbg {
-                background-color: #444444;
-                color: white;
-                padding: 5px;
-                font-weight: bold;
-            }
-            .windowbg2 {
-                background-color: #BCD1DC;
-            }
-            .titlebg {
-                background-color: #444444;
-                color: white;
-                font-weight: bold;
-                padding: 5px;
-            }
-            .config-container {
-                width: 95%;
-                margin: 20px auto;
-                background-color: white;
-                border: 1px solid #000000;
-            }
-            .config-header {
-                background-color: #444444;
-                color: white;
-                padding: 10px;
-                font-weight: bold;
-                font-size: 14px;
-                margin-bottom: 10px;
-            }
-            .form-group {
-                /*margin-bottom: 2px;*/
-                padding-left: 10px;
-                padding-right: 10px;
-            }
-            #promptDiv, #imageDiv, #signatureDiv {
-                margin-top: 12px;
-            }
-            #promptDiv {
-                margin-top: 16px;
-            }
-            label {
-                display: block;
-                /* margin-bottom: 5px; */
-                font-weight: bold;
-                color: #005177;
-            }
-            input[type="checkbox"] {
-                margin-right: 10px;
-            }
-            textarea, input[type="text"] {
-                width: 100%;
-                padding: 8px;
-                border: 1px solid #ddd;
-                border-radius: 4px;
-                box-sizing: border-box;
-                font-family: Verdana, Arial, sans-serif;
-                font-size: 12px;
-            }
-            .button-group {
-                display: flex;
-                justify-content: flex-end;
-                gap: 10px;
-                margin-top: 20px;
-                padding: 10px;
-                background-color: #BCD1DC;
-            }
-            
-            /* --- ESTILOS DE BOTONES PERSONALIZADOS --- */
-            .pixel-button {
-                padding: 8px 15px 8px 35px; /* Padding a la izquierda para el icono */
-                border: 1px solid #000000; /* Borde negro */
-                border-radius: 15px; /* Bordes redondeados */
-                cursor: pointer;
-                font-weight: bold;
-                font-family: Verdana, Arial, sans-serif;
-                font-size: 12px;
-                color: #000000; /* Texto negro */
-                /* Simulación de degradado */
-                background: linear-gradient(to bottom, #FFFFFF 0%, #E0E0E0 50%, #C0C0C0 100%);
-                background-repeat: no-repeat;
-                background-position: 8px center; /* Posición del icono */
-                background-size: 20px 20px; /* Tamaño del icono */
-                transition: background 0.1s;
-                box-shadow: 1px 1px 2px rgba(0,0,0,0.3); /* Sombra sutil */
-            }
-
-            #saveBtn {
-                /* Icono de disquete (Guardar) */
-                background-image: url('https://img.icons8.com/color/48/000000/save--v1.png'); /* Icono Save (Disquete) */
-            }
-
-            #resetBtn {
-                /* Icono de flecha circular (Resetear) */
-                background-image: url('https://img.icons8.com/color/48/000000/restart--v1.png'); /* Icono Restart (Flecha circular) */
-            }
-
-/*
-            .pixel-button:hover {
-                background: linear-gradient(to bottom, #EEEEEE 0%, #D0D0D0 50%, #B0B0B0 100%);
-            }
-*/
-
-            .smalltext {
-                font-size: 11px;
-            }
-            .hrcolor {
-                color: #BCD1DC;
-                background-color: #BCD1DC;
-                height: 1px;
-                border: 0;
-            }
+            html { text-size-adjust: none; }
+            body { font-family: Verdana, Arial, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; color: #005177; }
+            .bordercolor { border: 1px solid #000000; }
+            .catbg { background-color: #444444; color: white; padding: 5px; font-weight: bold; }
+            .windowbg2 { background-color: #BCD1DC; }
+            .titlebg { background-color: #444444; color: white; font-weight: bold; padding: 5px; }
+            .config-container { width: 95%; margin: 20px auto; background-color: white; border: 1px solid #000000; }
+            .config-header { background-color: #444444; color: white; padding: 10px; font-weight: bold; font-size: 14px; margin-bottom: 10px; }
+            .form-group { padding-left: 10px; padding-right: 10px; }
+            #promptDiv, #imageDiv, #signatureDiv { margin-top: 12px; }
+            #promptDiv { margin-top: 16px; }
+            label { display: block; font-weight: bold; color: #005177; }
+            input[type="checkbox"] { margin-right: 10px; }
+            textarea, input[type="text"] { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-family: Verdana, Arial, sans-serif; font-size: 12px; }
+            .button-group { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; padding: 10px; background-color: #BCD1DC; }
+            .pixel-button { padding: 8px 15px 8px 35px; border: 1px solid #000000; border-radius: 15px; cursor: pointer; font-weight: bold; font-family: Verdana, Arial, sans-serif; font-size: 12px; color: #000000; background: linear-gradient(to bottom, #FFFFFF 0%, #E0E0E0 50%, #C0C0C0 100%); background-repeat: no-repeat; background-position: 8px center; background-size: 20px 20px; transition: background 0.1s; box-shadow: 1px 1px 2px rgba(0,0,0,0.3); }
+            #saveBtn { background-image: url('https://img.icons8.com/color/48/000000/save--v1.png'); }
+            #resetBtn { background-image: url('https://img.icons8.com/color/48/000000/restart--v1.png'); }
+            .smalltext { font-size: 11px; }
+            .hrcolor { color: #BCD1DC; background-color: #BCD1DC; height: 1px; border: 0; }
         </style>
     </head>
     <body>
@@ -959,44 +770,30 @@ const inyectLLMOptionsPage = () => {
                 </td>
             </tr>
         </table>
-
         <br>
-
         <div class="config-container">
             <div class="config-header">
                 <img src="https://foro.elhacker.net/Themes/converted/images/icons/profile_sm.gif" alt="" align="top" />&nbsp;
                 Configuración del Bot LLM
             </div>
-
             <div class="form-group">
-                <label>
-                    <input type="checkbox" id="enableBot">
-                    Habilitar Bot
-                </label>
+                <label><input type="checkbox" id="enableBot"> Habilitar Bot</label>
             </div>
-
             <div class="form-group">
-                <label>
-                    <input type="checkbox" id="autoScroll">
-                    Scroll Automático
-                </label>
+                <label><input type="checkbox" id="autoScroll"> Scroll Automático</label>
             </div>
-            
             <div class="form-group" id="promptDiv">
                 <label for="prompt">Prompt:</label>
                 <textarea id="prompt" placeholder="${botPromptPlaceholder}" rows="4"></textarea>
             </div>
-
             <div class="form-group" id="imageDiv">
                 <label for="botImage">Imagen del bot:</label>
                 <input type="text" id="botImage" placeholder="${botImageURL}">
             </div>
-            
             <div class="form-group" id="signatureDiv">
                 <label for="signature">Firma:</label>
                 <textarea id="signature" placeholder="${botSignature}" rows="4"></textarea>
             </div>
-            
             <div class="button-group">
                 <button id="saveBtn" class="pixel-button">Guardar</button>
                 <button id="resetBtn" class="pixel-button">Resetear</button>
@@ -1004,12 +801,10 @@ const inyectLLMOptionsPage = () => {
         </div>
         <script>
           const runCode = () => {
-            // Definir variables con los valores por defecto (escapados)
             const defaultPrompt = "${botPromptPlaceholder}";
             const defaultImage = "${botImageURL}";
             const defaultSignature = "${botSignature}";
             
-            // Cargar configuración existente al iniciar
             function loadConfig() {
                 document.getElementById('enableBot').checked = localStorage.getItem('llmBotEnabled') === 'true';
                 document.getElementById('autoScroll').checked = localStorage.getItem('llmBotAutoScroll') === 'true';
@@ -1018,108 +813,39 @@ const inyectLLMOptionsPage = () => {
                 document.getElementById('signature').value = localStorage.getItem('llmBotSignature') || defaultSignature;
             }
             
-            // Guardar configuración
             document.getElementById('saveBtn').addEventListener('click', function() {
                 localStorage.setItem('llmBotEnabled', document.getElementById('enableBot').checked);
                 localStorage.setItem('llmBotAutoScroll', document.getElementById('autoScroll').checked);
                 localStorage.setItem('llmBotPrompt', document.getElementById('prompt').value);
                 localStorage.setItem('llmBotImage', document.getElementById('botImage').value);
                 localStorage.setItem('llmBotSignature', document.getElementById('signature').value);
-                
                 window.location = window.location.href.split("#")[0];
             });
 
-            // Reset config
             document.getElementById('resetBtn').addEventListener('click', function() {
                 localStorage.removeItem('llmBotEnabled');
                 localStorage.removeItem('llmBotAutoScroll');
                 localStorage.removeItem('llmBotPrompt');
                 localStorage.removeItem('llmBotImage');
                 localStorage.removeItem('llmBotSignature');
-
-                loadConfig(); // Recargar valores por defecto
+                loadConfig();
                 window.location = window.location.href.split("#")[0];
             });
 
-            // Cargar configuración al iniciar
             loadConfig();
           }
 
           ${RUN_FROM_GREASYMONKEY ? "" : "runCode();"};
         </script>
-${RUN_FROM_GREASYMONKEY ? `<button onclick="(function() {
-        // Definir variables con los valores por defecto (escapados)
-        const defaultPrompt = '${botPromptPlaceholder}';
-        const defaultImage = '${botImageURL}';
-        const defaultSignature = '${botSignature}';
-
-        // Cargar configuración existente al iniciar
-        function loadConfig() {
-            if (document.getElementById('enableBot')) {
-                document.getElementById('enableBot').checked = localStorage.getItem('llmBotEnabled') === 'true';
-            }
-            if (document.getElementById('autoScroll')) {
-                document.getElementById('autoScroll').checked = localStorage.getItem('llmBotAutoScroll') === 'true';
-            }
-            if (document.getElementById('prompt')) {
-                document.getElementById('prompt').value = localStorage.getItem('llmBotPrompt') || defaultPrompt;
-            }
-            if (document.getElementById('botImage')) {
-                document.getElementById('botImage').value = localStorage.getItem('llmBotImage') || defaultImage;
-            }
-            if (document.getElementById('signature')) {
-                document.getElementById('signature').value = localStorage.getItem('llmBotSignature') || defaultSignature;
-            }
-        }
-
-        // Guardar configuración
-        const saveBtn = document.getElementById('saveBtn');
-        if (saveBtn) {
-            saveBtn.addEventListener('click', function() {
-                localStorage.setItem('llmBotEnabled', document.getElementById('enableBot').checked);
-                localStorage.setItem('llmBotAutoScroll', document.getElementById('autoScroll').checked);
-                localStorage.setItem('llmBotPrompt', document.getElementById('prompt').value);
-                localStorage.setItem('llmBotImage', document.getElementById('botImage').value);
-                localStorage.setItem('llmBotSignature', document.getElementById('signature').value);
-                window.location = window.location.href.split('#')[0];
-            });
-        }
-
-        // Reset config
-        const resetBtn = document.getElementById('resetBtn');
-        if (resetBtn) {
-            resetBtn.addEventListener('click', function() {
-                localStorage.removeItem('llmBotEnabled');
-                localStorage.removeItem('llmBotAutoScroll');
-                localStorage.removeItem('llmBotPrompt');
-                localStorage.removeItem('llmBotImage');
-                localStorage.removeItem('llmBotSignature');
-                loadConfig(); // Recargar valores por defecto
-                window.location = window.location.href.split('#')[0];
-            });
-        }
-
-        // Cargar configuración al iniciar
-        loadConfig();
-    })();
-">Ejecutar Configuración</button>` : ""}
-
     </body>
     </html>`);
     document.close();
-
-    //throw new Error("LLMConfigPage is ready");
-};
-
-
-
-
+  };
 
   /* MAIN */
   if (RUN_ONLY_ON_LOGGED_IN_USERS && isUserLoggedOut()) {
     return `${BOT_NAME} not running for not logged in users`;
   }
-  
   
   if (RUN_ONLY_AT_TEST_SUBFORUM && (!isTestSubforum())) {
     if (RUN_FROM_GREASYMONKEY) {
@@ -1140,24 +866,20 @@ ${RUN_FROM_GREASYMONKEY ? `<button onclick="(function() {
     return "Bot not running at url/post.html";
   }
 
-  // detect when navigating directly to #llmBotConfig
   if (isUserAtConfigLLMPage() || (RUNNING_FORUM_IN_LOCAL_SERVER && window.location.href == "http://localhost:8000/index.html#llmBotConfig")) {
     inyectLLMOptionsPage();
   }
 
-  // detect when navigating to url from profile.html using the link
   window.addEventListener("hashchange", () => {
     if (isUserAtConfigLLMPage() || (RUNNING_FORUM_IN_LOCAL_SERVER && window.location.href == "http://localhost:8000/index.html#llmBotConfig")) {
       inyectLLMOptionsPage();
     }
   });
 
-  // Do not run bot if not enabled
   if (localStorage.getItem("llmBotEnabled") === "false" || localStorage.getItem("llmBotEnabled") == null) {
     return;
   }
 
-  // Config bot with user preferences before run
   if (localStorage.getItem("llmBotAutoScroll") === "true") {
     SCROLL_TO_BOT_MESSAGE = true; 
   } else {
@@ -1165,24 +887,20 @@ ${RUN_FROM_GREASYMONKEY ? `<button onclick="(function() {
   }
 
   if (localStorage.getItem("llmBotPrompt")) {
-    BOT_CONTEXT = localStorage.getItem("llmBotPrompt") 
+    BOT_CONTEXT = localStorage.getItem("llmBotPrompt");
     BOT_RULES = "";
   }
 
   BOT_FORUM_IMAGE_URL = localStorage.getItem("llmBotImage") || BOT_FORUM_IMAGE_URL;
   BOT_FORUM_SIGNATURE = localStorage.getItem("llmBotSignature") || BOT_FORUM_SIGNATURE;
 
-  // Run bot
   const forumData = extractForumData();
   const contextData = buildLLMContext(forumData);
   const placeholderElement = createPlaceholderElement();
 
   generateResponseStream(contextData, placeholderElement).then((success) => {
     if (success) {
-      //console.log('Script ejecutado exitosamente en modo stream');
-    } else {
-      //console.log('Script completado con advertencias');
+      // Ejecutado
     }
   });
 }
-
