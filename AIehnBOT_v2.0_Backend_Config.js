@@ -99,7 +99,7 @@ function runBot() {
   - Sé conciso pero informativo
   - No menciones que eres una IA`
   const API_ENDPOINT = "https://api.elhacker.net/api/chat";
-  const API_MODEL = "mistral-large-3:675b-cloud";
+  const API_MODEL = "gpt-oss:20b-cloud";
   const API_ROL = "user";
   const BLOCKED_URL = 'about:blank#blocked'; 
   const RUNNING_FORUM_IN_LOCAL_SERVER = false; // swap urls from https://foro.elhacker.net to http://localhost:8000 for development
